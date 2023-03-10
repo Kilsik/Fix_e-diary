@@ -1,40 +1,11 @@
 import random
 import sys
 
-from datacenter.models import *
+from datacenter.models import Schoolkid, Chastisement, Subject, Commendation, Mark
 from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 
 
-def fix_marks(name):
-    try:
-        schoolkid = Schoolkid.objects.get(full_name__icontains=name)
-    except MultipleObjectsReturned:
-        print("С таким именем есть несколько учеников. Требуется уточнениею")
-        return
-    except Schoolkid.DoesNotExist:
-        print("Не найден ученик с таким именем!")
-        return
-    bad_marks = Mark.objects.filter(schoolkid=schoolkid, points__lte=3)
-    for bad_mark in bad_marks:
-        bad_mark.points = 5
-        bad_mark.save()
-
-
-def remove_chastisements(name):
-    try:
-        schoolkid = Schoolkid.objects.get(full_name__icontains=name)
-    except MultipleObjectsReturned:
-        print("С таким именем есть несколько учеников. Требуется уточнениею")
-        return
-    except Schoolkid.DoesNotExist:
-        print("Не найден ученик с таким именем!")
-        return
-    chastisements = Chastisement.objects.filter(schoolkid=schoolkid)
-    chastisements.delete()
-
-
-def create_commendation(name, lesson):
-    compliments = [
+COMPLIMENTS = [
         'Молодец!',
         'Отлично!',
         'Хорошо!',
@@ -66,13 +37,38 @@ def create_commendation(name, lesson):
         'Ты многое сделал, я это вижу!',
         'Теперь у тебя точно все получится!'
         ]
+
+
+def get_schoolkid(name):
     try:
         schoolkid = Schoolkid.objects.get(full_name__icontains=name)
-    except MultipleObjectsReturned:
+        return schoolkid
+    except Schoolkid.MultipleObjectsReturned:
         print("С таким именем есть несколько учеников. Требуется уточнениею")
-        return
+        return False
     except Schoolkid.DoesNotExist:
         print("Не найден ученик с таким именем!")
+
+
+def fix_marks(name):
+    schoolkid = get_schoolkid(name)
+    if not schoolkid:
+        return
+    bad_marks = Mark.objects.filter(schoolkid=schoolkid, points__lte=3)
+    bad_marks.update(points=5)
+
+
+def remove_chastisements(name):
+    schoolkid = get_schoolkid(name)
+    if not schoolkid:
+        return
+    chastisements = Chastisement.objects.filter(schoolkid=schoolkid)
+    chastisements.delete()
+
+
+def create_commendation(name, lesson):
+    schoolkid = get_schoolkid(name)
+    if not schoolkid:
         return
     year_of_study = schoolkid.year_of_study
     group_letter = schoolkid.group_letter
@@ -89,7 +85,7 @@ def create_commendation(name, lesson):
     selected_lessons = Lesson.objects.filter(year_of_study=year_of_study,
         group_letter=group_letter, subject=subject).exclude(date__in=lucky_days)
     lucky_lesson = random.choice(selected_lessons)
-    text = random.choice(compliments)
+    text = random.choice(COMPLIMENTS)
     created = lucky_lesson.date
     teacher = lucky_lesson.teacher
     Commendation.objects.create(text=text, created=created, schoolkid=schoolkid,
