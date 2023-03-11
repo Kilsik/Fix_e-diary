@@ -2,7 +2,6 @@ import random
 import sys
 
 from datacenter.models import Schoolkid, Chastisement, Subject, Commendation, Mark
-from django.core.exceptions import MultipleObjectsReturned, ObjectDoesNotExist
 
 
 COMPLIMENTS = [
@@ -86,7 +85,7 @@ def create_commendation(name, lesson):
         group_letter=group_letter, subject=subject).exclude(date__in=lucky_days)
     lucky_lesson = random.choice(selected_lessons)
     text = random.choice(COMPLIMENTS)
-    created = lucky_lesson.date
+    lucky_date = lucky_lesson.date
     teacher = lucky_lesson.teacher
-    Commendation.objects.create(text=text, created=created, schoolkid=schoolkid,
+    Commendation.objects.create(text=text, created=lucky_date, schoolkid=schoolkid,
         subject=subject, teacher=teacher)
